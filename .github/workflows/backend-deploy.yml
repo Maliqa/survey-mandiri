@@ -1,0 +1,90 @@
+name: Backend Deploy (demo VPS)
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "deploy/**", ".github/workflows/backend-*.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/backend-ci.yml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+      image: ${{ steps.vars.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: vars
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/survey-mandiri-backend" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+            ${{ steps.vars.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload stack files
+        env:
+          TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "${{ secrets.VPS_PORT || 22 }}" "$TARGET" 'mkdir -p ~/survey-mandiri'
+          scp -i ~/.ssh/id_deploy -P "${{ secrets.VPS_PORT || 22 }}" \
+            deploy/docker-compose.yml deploy/Caddyfile deploy/deploy.sh deploy/.env.example \
+            "$TARGET:~/survey-mandiri/"
+      - name: Pull & restart on VPS
+        env:
+          TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+          TAG: ${{ needs.build.outputs.tag }}
+          IMAGE: ${{ needs.build.outputs.image }}
+          # Custom domain if set, otherwise free <ip-with-dashes>.sslip.io
+          DOMAIN_VAR: ${{ vars.DEMO_DOMAIN }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DOMAIN="${DOMAIN_VAR:-${VPS_HOST//./-}.sslip.io}"
+          SSH="ssh -i $HOME/.ssh/id_deploy -p ${{ secrets.VPS_PORT || 22 }} $TARGET"
+          # Token goes through stdin, never on a command line.
+          printf '%s' "$GHCR_TOKEN" | $SSH "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          set +e
+          $SSH "cd ~/survey-mandiri && chmod +x deploy.sh && DOMAIN='$DOMAIN' BACKEND_IMAGE='$IMAGE' ./deploy.sh '$TAG'"
+          rc=$?
+          $SSH "docker logout ghcr.io" || true
+          exit $rc

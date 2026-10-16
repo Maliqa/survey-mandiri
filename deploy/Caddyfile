@@ -1,0 +1,14 @@
+{$DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 12MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	# Media is never served directly: Django checks permissions for every file.
+	reverse_proxy web:8000
+}

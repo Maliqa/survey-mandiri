@@ -1,0 +1,73 @@
+# Survey Mandiri demo stack. Lives on the VPS at ~/survey-mandiri/ next to .env
+# Deploys are done by GitHub Actions (deploy.sh). Manual: ./deploy.sh <image-tag>
+name: survey-mandiri
+
+x-app: &app
+  image: ${BACKEND_IMAGE}:${IMAGE_TAG:-latest}
+  env_file: .env
+  restart: unless-stopped
+  volumes:
+    - media:/data/media
+  depends_on:
+    db: {condition: service_healthy}
+    redis: {condition: service_healthy}
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "5"}
+
+services:
+  web:
+    <<: *app
+    expose: ["8000"]
+
+  worker:
+    <<: *app
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=2"]
+    healthcheck: {disable: true}
+
+  beat:
+    <<: *app
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/tmp/celerybeat-schedule"]
+    healthcheck: {disable: true}
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  caddy_data:
+  caddy_config:
