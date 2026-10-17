@@ -30,8 +30,15 @@ fi
 sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${TAG}|" .env
 DOMAIN=$(grep -E '^DOMAIN=' .env | cut -d= -f2-)
 
+# Created by us (not by Docker as root) so the Android workflow can upload the APK.
+mkdir -p public
+
 echo "==> Pulling ${TAG}"
 docker compose pull web worker beat
+
+echo "==> Validating Caddyfile (before touching the running proxy)"
+docker compose pull caddy
+docker compose run --rm --no-deps -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
 echo "==> Starting db/redis"
 docker compose up -d db redis

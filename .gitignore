@@ -14,3 +14,6 @@ android/app/build/
 android/local.properties
 *.jks
 *.keystore
+
+# Demo signing key is intentionally committed (demo builds only)
+!android/app/demo.keystore

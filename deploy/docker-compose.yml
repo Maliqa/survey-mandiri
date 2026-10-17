@@ -61,6 +61,7 @@ services:
       DOMAIN: ${DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./public:/srv/public:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [web]

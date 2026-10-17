@@ -10,6 +10,20 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
-	# Media is never served directly: Django checks permissions for every file.
-	reverse_proxy web:8000
+
+	# Customer download page + APK (uploaded by the Android workflow).
+	redir /download /download/
+	handle_path /download/* {
+		root * /srv/public
+		@apk path *.apk
+		header @apk Content-Type application/vnd.android.package-archive
+		header @apk Cache-Control no-cache
+		file_server
+	}
+
+	# Everything else is the Django API/admin. Media is never served directly:
+	# Django checks permissions for every file.
+	handle {
+		reverse_proxy web:8000
+	}
 }

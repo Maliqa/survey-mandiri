@@ -267,3 +267,43 @@ Lihat `deploy/.env.example`. Yang paling penting:
 4. Kuesioner dinamis untuk caleg/produk (`answers` sudah berupa JSON).
 5. Payment gateway (Midtrans/Xendit) + webhook.
 6. Monitoring: Sentry + uptime check ke `/api/health`.
+
+---
+
+# Fase 2 — App Android
+
+Satu aplikasi untuk dua role. Setelah login, app otomatis membuka mode **Client** atau **Surveyor** sesuai akun. Akun admin tetap memakai panel web.
+
+**Distribusi ke customer:** buka `https://103-54-170-83.sslip.io/download/` di HP, unduh APK, lalu instal. Setiap push ke `android/**` memicu workflow `Android APK` yang menjalankan unit test, build APK, membuat GitHub Release `android-v0.1.N`, dan meng-upload APK ke VPS.
+
+| Layar | Fungsi |
+|---|---|
+| Login / Daftar Client / Daftar Surveyor | Daftar surveyor: KTP + selfie lewat kamera, GPS domisili, radius layanan. |
+| Client: daftar permintaan → buat → detail | Form per kategori (leasing: alamat + titik GPS; caleg/produk: daftar pertanyaan). Alur: setujui harga → bayar (demo, ke escrow) → pantau progres → review laporan (foto + flag fraud) → tolak / selesaikan. |
+| Surveyor: Job / Tugas / Dompet | Job di area sekitar (diurutkan dari yang terdekat), ambil unit, isi laporan (foto kamera + GPS + jawaban), riwayat pendapatan. |
+
+**Offline-first:** laporan disimpan dulu di HP (`filesDir/pending_reports`: JSON + JPEG), lalu dikirim oleh WorkManager saat ada sinyal. Pengiriman memakai `client_uuid` dari HP, jadi retry tidak pernah membuat laporan ganda. Error yang bersifat permanen (misalnya ditolak server) ditampilkan di layar tugas dengan opsi kirim ulang atau hapus.
+
+**Keamanan & anti-fraud di sisi app:** JWT disimpan di storage privat app. Saat access token kedaluwarsa (401), token di-refresh otomatis sekali; kalau refresh token ditolak, user kembali ke login. Foto hanya dari kamera (bukan galeri), dikompres maksimal 1600 px dengan rotasi EXIF diperbaiki. Flag `isMock` dari GPS ikut dikirim. Foto laporan diambil lewat endpoint privat dengan token.
+
+**Struktur:**
+```
+android/app/src/main/java/id/surveymandiri/app/
+├── SurveyApp.kt, MainActivity.kt
+├── data/   ApiModels, ApiService (Retrofit), Network (token, refresh, error), AppContainer (DI manual), PendingReports (outbox + UploadWorker)
+├── util/   DeviceUtils (kompres foto, GPS + deteksi mock)
+└── ui/     Common, Capture (kamera/lokasi), AuthScreens, ClientScreens, SurveyorScreens, AppNav
+```
+
+**Trade-off yang disengaja:**
+- **DI manual, bukan Hilt.** Build hanya berjalan di CI, jadi lebih sedikit annotation processing berarti lebih sedikit titik gagal. Mudah dimigrasi ke Hilt nanti.
+- **Outbox berbasis file, bukan Room.** Alasannya sama. Strukturnya sudah siap dipindah ke Room.
+- **APK ditandatangani `android/app/demo.keystore`** (di-commit, khusus demo) supaya update APK bisa langsung menimpa versi lama. Sebelum rilis ke Play Store, ganti dengan keystore rahasia di GitHub Secrets.
+- **Teks UI di-hardcode dalam Bahasa Indonesia.** Pindahkan ke `strings.xml` kalau butuh multi-bahasa.
+
+**Build lokal** (Android Studio atau CLI, JDK 17):
+```bash
+cd android
+./gradlew :app:testDebugUnitTest :app:assembleDebug
+# server lain: ./gradlew assembleDebug -PapiBaseUrl=https://api.domainlu.id/
+```

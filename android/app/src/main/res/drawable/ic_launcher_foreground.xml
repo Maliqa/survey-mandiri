@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clipboard with a check mark, centred in the 108dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,34h28a4,4 0,0 1,4 4v34a4,4 0,0 1,-4 4h-28a4,4 0,0 1,-4 -4v-34a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#0B6E4F"
+        android:pathData="M47,30h14a2,2 0,0 1,2 2v4a2,2 0,0 1,-2 2h-14a2,2 0,0 1,-2 -2v-4a2,2 0,0 1,2 -2z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0B6E4F"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M45,56l6,6l12,-13" />
+</vector>

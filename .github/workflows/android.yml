@@ -1,0 +1,92 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # create GitHub Release + push build logs to the ci-logs branch
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests + build APK
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Logs of public-repo runs need auth to download; mirroring them to a branch
+      # lets anyone with read access (and the coding assistant) see compile errors.
+      - name: Publish failure log to ci-logs branch
+        if: failure()
+        working-directory: ${{ runner.temp }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ci-logs && cd ci-logs
+          grep -nE '^e: |error:|What went wrong|FAILED|Could not|> ' ../build.log | head -300 > android-errors.log || true
+          tail -n 500 ../build.log > android-build-tail.log || true
+          echo "run=${{ github.run_number }} sha=${{ github.sha }}" > RUN.txt
+          git init -q -b ci-logs
+          git -c user.name=ci -c user.email=ci@localhost add .
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "Android build log, run ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-logs
+
+      - name: Prepare artifacts
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/survey-mandiri-demo.apk"
+          sed "s/__VERSION__/0.1.${{ github.run_number }}/" download/index.html > "$RUNNER_TEMP/index.html"
+          ls -lh "$RUNNER_TEMP/survey-mandiri-demo.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey-mandiri-demo-apk
+          path: ${{ runner.temp }}/survey-mandiri-demo.apk
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v0.1.${{ github.run_number }}
+          name: Survey Mandiri Android v0.1.${{ github.run_number }} (demo)
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: ${{ runner.temp }}/survey-mandiri-demo.apk
+          body: |
+            APK demo, terhubung ke https://103-54-170-83.sslip.io
+            Halaman unduh untuk customer: https://103-54-170-83.sslip.io/download/
+
+      - name: Publish to demo VPS (/download)
+        if: env.VPS_HOST != ''
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_PORT: ${{ secrets.VPS_PORT || 22 }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p ~/sm-demo/public'
+          scp -i ~/.ssh/id_deploy -P "$VPS_PORT" "$RUNNER_TEMP/survey-mandiri-demo.apk" "$RUNNER_TEMP/index.html" "$VPS_USER@$VPS_HOST:~/sm-demo/public/"
