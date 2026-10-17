@@ -41,6 +41,8 @@ docker compose run --rm web python manage.py migrate --noinput
 
 echo "==> Restarting app"
 docker compose up -d --remove-orphans
+# Caddyfile is a bind mount: recreate so config changes always apply (certs live in a volume).
+docker compose up -d --force-recreate --no-deps caddy
 
 echo "==> Health check https://${DOMAIN}/api/health (first TLS certificate can take ~1 min)"
 for _ in $(seq 1 45); do

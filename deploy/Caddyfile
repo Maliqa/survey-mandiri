@@ -6,7 +6,8 @@
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
-		Referrer-Policy "no-referrer"
+		# no-referrer makes browsers send "Origin: null" on POST, which breaks Django CSRF (admin login).
+		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
 	# Media is never served directly: Django checks permissions for every file.
