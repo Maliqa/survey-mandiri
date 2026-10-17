@@ -1,6 +1,6 @@
-# Survey Mandiri demo stack. Lives on the VPS at ~/survey-mandiri/ next to .env
+# Survey Mandiri demo stack. Lives on the VPS at ~/sm-demo/ next to .env
 # Deploys are done by GitHub Actions (deploy.sh). Manual: ./deploy.sh <image-tag>
-name: survey-mandiri
+name: sm-demo
 
 x-app: &app
   image: ${BACKEND_IMAGE}:${IMAGE_TAG:-latest}

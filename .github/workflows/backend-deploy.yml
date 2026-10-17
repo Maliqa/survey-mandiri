@@ -64,10 +64,10 @@ jobs:
         env:
           TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
         run: |
-          ssh -i ~/.ssh/id_deploy -p "${{ secrets.VPS_PORT || 22 }}" "$TARGET" 'mkdir -p ~/survey-mandiri'
+          ssh -i ~/.ssh/id_deploy -p "${{ secrets.VPS_PORT || 22 }}" "$TARGET" 'mkdir -p ~/sm-demo'
           scp -i ~/.ssh/id_deploy -P "${{ secrets.VPS_PORT || 22 }}" \
             deploy/docker-compose.yml deploy/Caddyfile deploy/deploy.sh deploy/.env.example \
-            "$TARGET:~/survey-mandiri/"
+            "$TARGET:~/sm-demo/"
       - name: Pull & restart on VPS
         env:
           TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
@@ -84,7 +84,7 @@ jobs:
           # Token goes through stdin, never on a command line.
           printf '%s' "$GHCR_TOKEN" | $SSH "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
           set +e
-          $SSH "cd ~/survey-mandiri && chmod +x deploy.sh && DOMAIN='$DOMAIN' BACKEND_IMAGE='$IMAGE' ./deploy.sh '$TAG'"
+          $SSH "cd ~/sm-demo && chmod +x deploy.sh && DOMAIN='$DOMAIN' BACKEND_IMAGE='$IMAGE' ./deploy.sh '$TAG'"
           rc=$?
           $SSH "docker logout ghcr.io" || true
           exit $rc

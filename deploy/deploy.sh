@@ -53,7 +53,7 @@ for _ in $(seq 1 45); do
       umask 077
       printf 'API      https://%s/api/docs\nAdmin    https://%s/%s\nPassword (all demo accounts): %s\n' \
         "$DOMAIN" "$DOMAIN" "$ADMIN_PATH" "$PASS" > demo-credentials.txt
-      echo "==> Demo accounts created. On the VPS run: cat ~/survey-mandiri/demo-credentials.txt"
+      echo "==> Demo accounts created. On the VPS run: cat ~/sm-demo/demo-credentials.txt"
     fi
     docker image prune -f >/dev/null
     exit 0

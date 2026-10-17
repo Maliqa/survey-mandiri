@@ -222,7 +222,7 @@ python manage.py runserver 0.0.0.0:8000      # Celery otomatis eager (tanpa Redi
 4. **Actions → Backend Deploy → Run workflow.** Deploy pertama otomatis membuat `.env` (secret acak, password DB, path admin acak) dan akun demo.
 5. Lihat URL dan password demo di VPS:
    ```bash
-   cat ~/survey-mandiri/demo-credentials.txt
+   cat ~/sm-demo/demo-credentials.txt
    ```
 
 Setelah itu, setiap push ke `main` otomatis ter-deploy.
