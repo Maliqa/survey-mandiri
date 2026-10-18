@@ -200,6 +200,9 @@ BUSINESS = {
     "DEMO_PAYMENTS": env_bool("DEMO_PAYMENTS", True),
 }
 
+# Signed report links (/laporan/<token>/) stay valid this long.
+REPORT_LINK_HOURS = int(os.environ.get("REPORT_LINK_HOURS", "72"))
+
 # --- Security (effective behind Caddy TLS) -----------------------------------
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True

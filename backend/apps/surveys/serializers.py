@@ -220,3 +220,9 @@ class ReportSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         path = f"/api/v1/reports/{obj.pk}/photo"
         return request.build_absolute_uri(path) if request else path
+
+
+class ReportLinkSerializer(serializers.Serializer):
+    url = serializers.URLField()
+    pdf_url = serializers.URLField()
+    expires_at = serializers.DateTimeField()

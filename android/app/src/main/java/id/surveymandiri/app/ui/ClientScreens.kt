@@ -1,6 +1,9 @@
 package id.surveymandiri.app.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -322,6 +325,27 @@ class RequestDetailViewModel(private val c: AppContainer, private val id: Long) 
         }
     }
 
+    var opening by mutableStateOf(false)
+        private set
+
+    /** Gets a signed link from the server and opens the printable report (or its PDF) in the browser. */
+    fun openReport(context: Context, pdf: Boolean) {
+        opening = true
+        viewModelScope.launch {
+            safeApi { c.api.reportLink(id) }
+                .onSuccess { link ->
+                    val url = if (pdf) link.pdfUrl + "?download=1" else link.url
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    } catch (e: ActivityNotFoundException) {
+                        toast(context, "Tidak ada browser di HP ini.")
+                    }
+                }
+                .onFailure { toast(context, it.message ?: "Gagal membuka laporan.") }
+            opening = false
+        }
+    }
+
     fun act(action: String, onMessage: (String) -> Unit) {
         loading = true
         viewModelScope.launch {
@@ -425,6 +449,15 @@ fun RequestDetailScreen(id: Long, onBack: () -> Unit, onReports: () -> Unit) {
             }
             if (req.assignments.orEmpty().any { it.reportsSubmitted > 0 } || req.status in setOf("in_review", "completed")) {
                 OutlinedButton(onClick = onReports, modifier = Modifier.fillMaxWidth()) { Text("Lihat Laporan") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { vm.openReport(context, pdf = false) }, enabled = !vm.opening, modifier = Modifier.weight(1f)) {
+                        Text("Laporan Lengkap")
+                    }
+                    OutlinedButton(onClick = { vm.openReport(context, pdf = true) }, enabled = !vm.opening, modifier = Modifier.weight(1f)) {
+                        Text("Unduh PDF")
+                    }
+                }
+                InfoText("Laporan lengkap bisa dibagikan ke tim kredit. Link berlaku 72 jam.")
             }
             if (req.status in setOf("quoted", "awaiting_payment", "open") && req.claimedUnits == 0) {
                 TextButton(onClick = { confirm = "cancel" }, modifier = Modifier.fillMaxWidth()) { Text("Batalkan Permintaan") }

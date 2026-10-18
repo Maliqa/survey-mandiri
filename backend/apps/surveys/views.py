@@ -20,7 +20,7 @@ from apps.core.exceptions import BusinessError
 from apps.core.files import sha256_of
 from apps.payments.models import Escrow
 
-from . import services
+from . import reporting, services
 from .models import Assignment, JobOffer, PricingRate, Report, SurveyRequest
 from .serializers import (
     AcceptJobSerializer,
@@ -31,6 +31,7 @@ from .serializers import (
     QuoteInputSerializer,
     QuoteOutputSerializer,
     RejectReportSerializer,
+    ReportLinkSerializer,
     ReportCreateSerializer,
     ReportSerializer,
     SurveyRequestCreateSerializer,
@@ -119,6 +120,12 @@ class SurveyRequestViewSet(
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         return self._out(services.complete_request(self.get_object().pk))
+
+    @extend_schema(request=None, responses=ReportLinkSerializer)
+    @action(detail=True, methods=["get"], url_path="report-link")
+    def report_link(self, request, pk=None):
+        """Signed, expiring links to the printable report page and its PDF."""
+        return Response(reporting.report_urls(self.get_object(), request))
 
     @extend_schema(responses=ReportSerializer(many=True))
     @action(detail=True, methods=["get"])

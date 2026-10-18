@@ -94,6 +94,12 @@ data class CreateRequestBody(
     val deadline: String,
 )
 
+data class ReportLinkDto(
+    val url: String,
+    @SerializedName("pdf_url") val pdfUrl: String,
+    @SerializedName("expires_at") val expiresAt: String?,
+)
+
 data class PayBody(val reference: String = "DEMO-APP")
 
 data class RejectBody(val reason: String)

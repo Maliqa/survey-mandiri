@@ -270,6 +270,15 @@ Lihat `deploy/.env.example`. Yang paling penting:
 
 ---
 
+## Laporan survei (web + PDF)
+
+Setiap order punya halaman laporan yang rapi di `/laporan/<token>/`. Isinya ringkasan, peta lokasi (OpenStreetMap), foto, GPS, jarak ke titik target, jawaban, dan tanda fraud. Laporan juga bisa diunduh sebagai PDF di `/laporan/<token>/pdf`.
+
+- **Client (app):** buka detail order, lalu tap **Laporan Lengkap** atau **Unduh PDF**. App mengambil link dari `GET /api/v1/requests/{id}/report-link`.
+- **Admin:** buka *Survey requests*, lalu kolom **Laporan** (Lihat / PDF).
+- **Keamanan:** token ditandatangani (`django.core.signing`) dan kedaluwarsa setelah `REPORT_LINK_HOURS` (default 72 jam). Siapa pun yang memegang link bisa membuka laporan, jadi link boleh diteruskan ke komite kredit, tapi jangan disebar luas. Halaman memakai `noindex` dan `no-referrer`.
+- **Panel admin → Reports:** thumbnail foto, badge fraud merah, filter *Mencurigakan/Bersih*, link Google Maps, dan jarak ke titik target.
+
 # Fase 2 — App Android
 
 Satu aplikasi untuk dua role. Setelah login, app otomatis membuka mode **Client** atau **Surveyor** sesuai akun. Akun admin tetap memakai panel web.

@@ -164,3 +164,7 @@ class Report(models.Model):
     class Meta:
         ordering = ["-submitted_at"]
         indexes = [models.Index(fields=["request", "status"])]
+
+    def __str__(self) -> str:
+        label = f" – {self.respondent_label}" if self.respondent_label else ""
+        return f"Laporan #{self.pk}{label}"

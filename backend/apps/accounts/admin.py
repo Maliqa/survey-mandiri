@@ -40,7 +40,10 @@ class SurveyorProfileAdmin(admin.ModelAdmin):
         if not obj.pk:
             return "-"
         url = reverse("surveyor-document", kwargs={"pk": obj.pk, "kind": kind})
-        return format_html('<a href="{}" target="_blank" rel="noopener">Lihat</a>', url)
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener"><img src="{}" style="max-width:min(360px,100%);border-radius:8px"></a>',
+            url, url,
+        )
 
     @admin.display(description="Foto KTP")
     def id_document_link(self, obj):

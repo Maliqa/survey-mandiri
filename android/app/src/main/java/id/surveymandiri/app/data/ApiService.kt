@@ -54,6 +54,9 @@ interface ApiService {
     @POST("api/v1/requests/{id}/complete")
     suspend fun complete(@Path("id") id: Long): SurveyRequestDto
 
+    @GET("api/v1/requests/{id}/report-link")
+    suspend fun reportLink(@Path("id") id: Long): ReportLinkDto
+
     @GET("api/v1/requests/{id}/reports")
     suspend fun requestReports(@Path("id") id: Long, @Query("page") page: Int = 1): Page<ReportDto>
 
