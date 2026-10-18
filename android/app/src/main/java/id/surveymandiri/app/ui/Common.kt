@@ -3,7 +3,6 @@ package id.surveymandiri.app.ui
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +32,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,14 +59,24 @@ import java.util.Locale
 // ---- Theme ---------------------------------------------------------------------------------
 private val Brand = Color(0xFF0B6E4F)
 
+/** Always light (white background), regardless of the phone's dark-mode setting. */
+private val LightColors = lightColorScheme(
+    primary = Brand,
+    onPrimary = Color.White,
+    secondary = Color(0xFF2E7D60),
+    background = Color.White,
+    onBackground = Color(0xFF1B1F1D),
+    surface = Color.White,
+    onSurface = Color(0xFF1B1F1D),
+    surfaceVariant = Color(0xFFF1F4F2),
+    surfaceContainer = Color(0xFFF4F7F5),
+    surfaceContainerLow = Color(0xFFF6F8F7),
+    surfaceContainerHighest = Color(0xFFEDF1EE),
+)
+
 @Composable
 fun SurveyTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) {
-        darkColorScheme(primary = Color(0xFF6FD3A8), secondary = Color(0xFF9CCFB8))
-    } else {
-        lightColorScheme(primary = Brand, secondary = Color(0xFF2E7D60))
-    }
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(colorScheme = LightColors, content = content)
 }
 
 // ---- DI helpers ------------------------------------------------------------------------------
